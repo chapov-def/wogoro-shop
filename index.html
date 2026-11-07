@@ -11,285 +11,325 @@
             --text-color: var(--tg-theme-text-color, #ffffff);
             --hint-color: var(--tg-theme-hint-color, #aaaaaa);
             --card-bg: var(--tg-theme-secondary-bg-color, #1e1e1e);
-            
-            --purple-color: #9d4edd;
             --purple-gradient: linear-gradient(135deg, #b5179e, #7209b7);
-            --green-color: #10b981;
             --green-gradient: linear-gradient(135deg, #22c55e, #15803d);
-            
-            /* Плавная анимация (как в iOS) */
+            --nav-bg: rgba(30, 30, 30, 0.95);
             --anim-easing: cubic-bezier(0.25, 1, 0.5, 1);
-            --anim-speed: 0.45s;
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: #000; /* Черный фон, чтобы края экрана смотрелись красиво */
+            background-color: #000;
             color: var(--text-color);
-            margin: 0;
-            height: 100vh;
-            overflow: hidden; /* Запрещаем прокрутку самого тела */
+            margin: 0; padding: 0;
+            height: 100vh; overflow: hidden;
         }
 
-        .views-container { 
-            position: relative; 
-            width: 100%; 
-            height: 100vh; 
-        }
-        
-        .view {
-            position: absolute; 
-            top: 0; left: 0; 
-            width: 100%; height: 100vh;
-            box-sizing: border-box; 
-            overflow-y: auto; /* Включаем прокрутку ВНУТРИ экранов */
-            background-color: var(--bg-color);
-            padding: 16px;
-            padding-bottom: 50px; /* Отступ снизу, чтобы последняя карточка не прилипала */
-            transform-origin: center left; /* Точка масштабирования при анимации */
+        /* Контейнер для вкладок */
+        .app-container {
+            position: relative; width: 100%; height: calc(100vh - 60px); /* 60px под меню */
+            overflow: hidden;
         }
 
-        /* --- АНИМАЦИЯ ЭКРАНА МАГАЗИНА --- */
-        #shop-view { 
-            z-index: 1; 
-            transition: transform var(--anim-speed) var(--anim-easing), opacity var(--anim-speed) var(--anim-easing);
+        .tab-content {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            overflow-y: auto; padding: 16px; padding-bottom: 20px; box-sizing: border-box;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s;
         }
-        #shop-view.slide-left { 
-            /* Уменьшается, уезжает влево и темнеет */
-            transform: scale(0.92) translateX(-20%); 
-            opacity: 0.3; 
-            border-radius: 20px;
+        .tab-content.active { opacity: 1; visibility: visible; }
+
+        /* Анимация экрана оплаты (поверх магазина) */
+        .checkout-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color); z-index: 100;
+            padding: 16px; box-sizing: border-box; overflow-y: auto;
+            transform: translateX(100%); transition: transform 0.45s var(--anim-easing);
+            box-shadow: -15px 0 30px rgba(0,0,0,0.7); border-radius: 20px 0 0 20px;
         }
+        .checkout-overlay.slide-in { transform: translateX(0); }
 
-        /* --- АНИМАЦИЯ ЭКРАНА ОПЛАТЫ --- */
-        #checkout-view { 
-            z-index: 2;
-            transform: translateX(100%); /* Изначально за правым краем */
-            transition: transform var(--anim-speed) var(--anim-easing);
-            box-shadow: -15px 0 30px rgba(0,0,0,0.7); /* Тень, чтобы казалось, что он поверх */
-            border-radius: 20px 0 0 20px;
+        /* --- НИЖНЕЕ МЕНЮ --- */
+        .bottom-nav {
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 60px;
+            background: var(--nav-bg); backdrop-filter: blur(10px);
+            display: flex; justify-content: space-around; align-items: center;
+            border-top: 1px solid rgba(255,255,255,0.05); z-index: 200;
         }
-        #checkout-view.slide-in { 
-            transform: translateX(0); /* Выезжает на экран */
+        .nav-item {
+            display: flex; flex-direction: column; align-items: center;
+            font-size: 11px; color: var(--hint-color); cursor: pointer; transition: color 0.2s;
         }
+        .nav-item.active { color: #c77dff; font-weight: bold; }
+        .nav-item span { font-size: 20px; margin-bottom: 2px; }
 
-        /* --- ОФОРМЛЕНИЕ --- */
-        .header { text-align: center; margin-bottom: 24px; margin-top: 10px;}
-        .header h1 { margin: 0; font-size: 24px; font-weight: 800; color: #fff;}
-        .header p { margin: 4px 0 0; color: var(--hint-color); font-size: 14px; }
-
-        .category-title { font-size: 18px; font-weight: 700; margin: 20px 0 10px 4px; color: #fff;}
-
+        /* --- ОФОРМЛЕНИЕ ТОВАРОВ --- */
+        .header h1 { margin: 0; font-size: 24px; font-weight: 800; text-align: center; }
+        .header p { margin: 4px 0 20px; color: var(--hint-color); font-size: 14px; text-align: center; }
+        .category-title { font-size: 18px; font-weight: 700; margin: 20px 0 10px 4px; }
         .card {
             background-color: var(--card-bg); border-radius: 16px; padding: 16px;
             margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-            display: flex; flex-direction: column; gap: 12px;
-            border: 1px solid rgba(255,255,255,0.05);
+            display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(255,255,255,0.05);
         }
-
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
         .card-title { font-size: 16px; font-weight: 700; margin: 0; }
-        .card-desc { font-size: 13px; color: var(--hint-color); margin: 4px 0 0; line-height: 1.4; }
-        
+        .card-desc { font-size: 13px; color: var(--hint-color); margin: 4px 0 0; }
         .prices { display: flex; gap: 8px; margin-top: 5px;}
-        
-        .price-badge {
-            background: rgba(16, 185, 129, 0.15); color: var(--green-color);
-            padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 700;
-            border: 1px solid rgba(16, 185, 129, 0.3);
-        }
-        .price-badge-stars { 
-            background: rgba(157, 78, 221, 0.15); color: #c77dff; 
-            border: 1px solid rgba(157, 78, 221, 0.3);
-        }
-
-        .buy-btn {
-            background: var(--purple-gradient); color: white; border: none;
-            padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 700;
-            cursor: pointer; width: 100%; 
-            transition: transform 0.1s;
-            box-shadow: 0 4px 15px rgba(114, 9, 183, 0.4);
-        }
+        .price-badge { background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .price-badge-stars { background: rgba(157, 78, 221, 0.15); color: #c77dff; border: 1px solid rgba(157, 78, 221, 0.3); }
+        .buy-btn { background: var(--purple-gradient); color: white; border: none; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; transition: transform 0.1s; }
         .buy-btn:active { transform: scale(0.96); }
 
-        /* Стили экрана оплаты */
-        .back-btn {
-            background: none; border: none; color: #c77dff;
-            font-size: 16px; font-weight: 600; padding: 10px 0; margin-bottom: 10px; cursor: pointer;
-            display: flex; align-items: center; gap: 5px;
-        }
+        /* --- ОФОРМЛЕНИЕ ОПЛАТЫ --- */
+        .back-btn { background: none; border: none; color: #c77dff; font-size: 16px; font-weight: 600; padding: 10px 0; margin-bottom: 10px; cursor: pointer; }
         .checkout-title { font-size: 22px; font-weight: 800; margin: 0 0 8px 0; }
-        .checkout-subtitle { font-size: 15px; color: var(--hint-color); margin-bottom: 24px; }
+        .contact-btn { display: block; text-align: center; background: var(--green-gradient); color: white; text-decoration: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; margin-bottom: 12px; }
+
+        /* --- ОФОРМЛЕНИЕ РУЛЕТКИ --- */
+        .roulette-box { text-align: center; padding: 20px 0; }
+        .wheel-container { width: 200px; height: 200px; margin: 0 auto 30px; border-radius: 50%; border: 8px solid #7209b7; position: relative; display: flex; align-items: center; justify-content: center; background: #1e1e1e; box-shadow: 0 0 20px rgba(114, 9, 183, 0.5); }
+        .wheel-text { font-size: 24px; font-weight: 800; color: #fff; }
+        .spin-btn { background: var(--purple-gradient); color: white; border: none; padding: 18px 40px; border-radius: 30px; font-size: 18px; font-weight: 800; cursor: pointer; box-shadow: 0 4px 15px rgba(114, 9, 183, 0.4); transition: transform 0.1s;}
+        .spin-btn:disabled { background: #333; color: #777; box-shadow: none; cursor: not-allowed; }
+        .spin-btn:active:not(:disabled) { transform: scale(0.95); }
+        .cooldown-text { color: #fbbf24; margin-top: 15px; font-weight: bold; font-size: 14px;}
         
-        .contact-btn {
-            display: block; text-align: center; background: var(--green-gradient);
-            color: white; text-decoration: none; padding: 18px; border-radius: 16px;
-            font-size: 18px; font-weight: 800; margin-bottom: 12px;
-            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
-            transition: transform 0.1s;
-        }
-        .contact-btn:active { transform: scale(0.96); }
-        
-        .reviews-link { display: block; text-align: center; color: #c77dff; text-decoration: none; margin-top: 15px; font-size: 14px; font-weight: 600;}
+        /* Анимация кручения */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(1080deg); } }
+        .spinning { animation: spin 2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; }
+
+        /* --- ОФОРМЛЕНИЕ НОВОСТЕЙ --- */
+        .news-card { background: var(--card-bg); border-radius: 16px; padding: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        .news-icon { font-size: 50px; margin-bottom: 15px; }
+        .news-title { font-size: 20px; font-weight: 800; margin: 0 0 10px; }
+        .news-desc { font-size: 14px; color: var(--hint-color); margin-bottom: 20px; line-height: 1.5; }
+        .news-btn { display: block; background: #3b82f6; color: white; text-decoration: none; padding: 15px; border-radius: 12px; font-weight: bold; font-size: 16px; }
     </style>
 </head>
 <body>
 
-    <div class="views-container">
+    <!-- ЭКРАНЫ ПРИЛОЖЕНИЯ -->
+    <div class="app-container">
         
-        <!-- ЭКРАН 1: МАГАЗИН -->
-        <div id="shop-view" class="view">
+        <!-- ВКЛАДКА 1: ТОВАРЫ -->
+        <div id="tab-shop" class="tab-content active">
             <div class="header">
                 <h1>👑 #Wogoro Black Russia☄️</h1>
                 <p>Качественные проекты и моды</p>
             </div>
 
             <div class="category-title">🔥 Проекты (с лаунчером)</div>
-
             <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h3 class="card-title">BLACK RUSSIA ULTRA</h3>
-                        <p class="card-desc">С обновлениями. Качественный лаунчер (jni).</p>
-                    </div>
-                </div>
-                <div class="prices">
-                    <span class="price-badge">200 💸</span>
-                    <span class="price-badge price-badge-stars">100 ⭐️</span>
-                </div>
+                <div><h3 class="card-title">BLACK RUSSIA ULTRA</h3><p class="card-desc">С обновлениями. Качественный лаунчер (jni).</p></div>
+                <div class="prices"><span class="price-badge">200 💸</span><span class="price-badge price-badge-stars">100 ⭐️</span></div>
                 <button class="buy-btn" onclick="openCheckout('BLACK RUSSIA ULTRA (Проект)', '200 ₽ / 100 ⭐️')">Купить</button>
             </div>
-
             <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h3 class="card-title">BLACK RUSSIA PRO</h3>
-                        <p class="card-desc">С мини-обновлениями. Качественный лаунчер (jni).</p>
-                    </div>
-                </div>
-                <div class="prices">
-                    <span class="price-badge">150 💸</span>
-                    <span class="price-badge price-badge-stars">85 ⭐️</span>
-                </div>
+                <div><h3 class="card-title">BLACK RUSSIA PRO</h3><p class="card-desc">С мини-обновлениями. Качественный лаунчер (jni).</p></div>
+                <div class="prices"><span class="price-badge">150 💸</span><span class="price-badge price-badge-stars">85 ⭐️</span></div>
                 <button class="buy-btn" onclick="openCheckout('BLACK RUSSIA PRO (Проект)', '150 ₽ / 85 ⭐️')">Купить</button>
             </div>
-
             <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h3 class="card-title">BLACK RUSSIA NEW</h3>
-                        <p class="card-desc">Качественный мод. Полный комплект.</p>
-                    </div>
-                </div>
-                <div class="prices">
-                    <span class="price-badge">100 💸</span>
-                    <span class="price-badge price-badge-stars">65 ⭐️</span>
-                </div>
+                <div><h3 class="card-title">BLACK RUSSIA NEW</h3><p class="card-desc">Качественный мод. Полный комплект.</p></div>
+                <div class="prices"><span class="price-badge">100 💸</span><span class="price-badge price-badge-stars">65 ⭐️</span></div>
                 <button class="buy-btn" onclick="openCheckout('BLACK RUSSIA NEW (Проект)', '100 ₽ / 65 ⭐️')">Купить</button>
             </div>
+        </div>
 
-            <div class="category-title">🎮 Моды (без лаунчера)</div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h3 class="card-title">BLACK RUSSIA ULTRA (Мод)</h3>
-                        <p class="card-desc">С обновлениями. ⚠️ Лаунчер НЕ входит!</p>
-                    </div>
-                </div>
-                <div class="prices">
-                    <span class="price-badge">150 💸</span>
-                    <span class="price-badge price-badge-stars">85 ⭐️</span>
-                </div>
-                <button class="buy-btn" onclick="openCheckout('BLACK RUSSIA ULTRA (Мод)', '150 ₽ / 85 ⭐️')">Купить</button>
+        <!-- ВКЛАДКА 2: РУЛЕТКА -->
+        <div id="tab-roulette" class="tab-content">
+            <div class="header">
+                <h1>🎰 Ежедневная рулетка</h1>
+                <p>Испытай удачу раз в 24 часа!</p>
             </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h3 class="card-title">BLACK RUSSIA PRO (Мод)</h3>
-                        <p class="card-desc">Мини-обновления. ⚠️ Лаунчер НЕ входит!</p>
-                    </div>
+            <div class="roulette-box">
+                <div id="wheel" class="wheel-container">
+                    <div id="wheel-text" class="wheel-text">🍀</div>
                 </div>
-                <div class="prices">
-                    <span class="price-badge">100 💸</span>
-                    <span class="price-badge price-badge-stars">75 ⭐️</span>
-                </div>
-                <button class="buy-btn" onclick="openCheckout('BLACK RUSSIA PRO (Мод)', '100 ₽ / 75 ⭐️')">Купить</button>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <h3 class="card-title">BLACK RUSSIA NEW (Мод)</h3>
-                        <p class="card-desc">Качественный мод. ⚠️ Лаунчер НЕ входит!</p>
-                    </div>
-                </div>
-                <div class="prices">
-                    <span class="price-badge">95 💸</span>
-                    <span class="price-badge price-badge-stars">65 ⭐️</span>
-                </div>
-                <button class="buy-btn" onclick="openCheckout('BLACK RUSSIA NEW (Мод)', '95 ₽ / 65 ⭐️')">Купить</button>
+                <button id="spin-btn" class="spin-btn" onclick="spinRoulette()">Крутить</button>
+                <div id="cooldown-text" class="cooldown-text" style="display: none;"></div>
             </div>
         </div>
 
-        <!-- ЭКРАН 2: ОПЛАТА -->
-        <div id="checkout-view" class="view">
+        <!-- ВКЛАДКА 3: НОВОСТИ -->
+        <div id="tab-news" class="tab-content">
+            <div class="header">
+                <h1>📰 Новости и Отзывы</h1>
+                <p>Будь в курсе всех обновлений</p>
+            </div>
+            <div class="news-card">
+                <div class="news-icon">⭐️</div>
+                <h2 class="news-title">Наш канал с отзывами</h2>
+                <p class="news-desc">Посмотри доказательства качества наших проектов, отзывы реальных клиентов и свежие новости магазина.</p>
+                <a href="#" onclick="openLink(event, 'https://t.me/WogoroShop')" class="news-btn">Перейти в канал</a>
+            </div>
+        </div>
+
+        <!-- ЭКРАН ОПЛАТЫ (Поверх всего) -->
+        <div id="checkout-view" class="checkout-overlay">
             <button class="back-btn" onclick="closeCheckout()">← Назад</button>
-            
             <h2 id="ch-title" class="checkout-title">Товар</h2>
-            <div id="ch-price" class="checkout-subtitle">Цена: 0</div>
-            
+            <div id="ch-price" class="checkout-subtitle" style="color: var(--hint-color); margin-bottom: 20px;">Цена: 0</div>
             <p style="font-size: 15px; line-height: 1.5; margin-bottom: 20px; color: #ccc;">
-                Вы можете оплатить покупку <b>рублями</b> (СБП/карта) или <b>звездами Telegram</b>. 
-                Для завершения покупки и получения товара, напишите нашему менеджеру.
+                Вы можете оплатить покупку <b>рублями</b> (СБП/карта) или <b>звездами Telegram</b>. Напишите менеджеру для завершения.
             </p>
-
             <a href="#" onclick="contactSeller(event)" class="contact-btn">💬 Написать @Wogoro</a>
-            
-            <a href="https://t.me/WogoroShop" onclick="openLink(event, 'https://t.me/WogoroShop')" class="reviews-link">⭐️ Перейти в канал с отзывами</a>
         </div>
 
+    </div>
+
+    <!-- НИЖНЕЕ МЕНЮ -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('shop', this)">
+            <span>🛍</span> Товары
+        </div>
+        <div class="nav-item" onclick="switchTab('roulette', this)">
+            <span>🎰</span> Рулетка
+        </div>
+        <div class="nav-item" onclick="switchTab('news', this)">
+            <span>📰</span> Новости
+        </div>
     </div>
 
     <script>
         let tg = window.Telegram.WebApp;
         tg.expand(); 
 
-        function vibrate() {
-            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        function vibrate() { if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light'); }
+
+        // --- ЛОГИКА ВКЛАДОК ---
+        function switchTab(tabId, element) {
+            vibrate();
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById('tab-' + tabId).classList.add('active');
+            element.classList.add('active');
+            
+            // При переключении на рулетку проверяем кулдаун
+            if(tabId === 'roulette') checkCooldown();
         }
 
-        // Открытие экрана оплаты
+        // --- ЛОГИКА ТОВАРОВ ---
         function openCheckout(product, price) {
             vibrate();
             document.getElementById('ch-title').innerText = product;
             document.getElementById('ch-price').innerText = "Цена: " + price;
-
-            // Добавляем классы для запуска CSS-анимации
-            document.getElementById('shop-view').classList.add('slide-left');
             document.getElementById('checkout-view').classList.add('slide-in');
         }
-
-        // Закрытие экрана оплаты (возврат назад)
         function closeCheckout() {
             vibrate();
-            // Убираем классы, чтобы анимация проигралась в обратную сторону
             document.getElementById('checkout-view').classList.remove('slide-in');
-            document.getElementById('shop-view').classList.remove('slide-left');
         }
-
         function contactSeller(e) {
-            e.preventDefault();
-            vibrate();
+            e.preventDefault(); vibrate();
             tg.openTelegramLink('https://t.me/Wogoro');
             tg.close();
         }
-
         function openLink(e, url) {
-            e.preventDefault();
-            tg.openLink(url);
+            e.preventDefault(); tg.openLink(url);
         }
+
+        // --- ЛОГИКА РУЛЕТКИ ---
+        const prizes = [
+            { name: "Пусто", weight: 400, display: "😢 Пусто" },
+            { name: "Скидка 5%", weight: 250, display: "5% 🎁" },
+            { name: "Скидка 10%", weight: 150, display: "10% 🎁" },
+            { name: "Скидка 15%", weight: 100, display: "15% 🎁" },
+            { name: "Скидка 20%", weight: 60, display: "20% 🔥" },
+            { name: "Скидка 30%", weight: 30, display: "30% 🔥" },
+            { name: "Скидка 40%", weight: 9, display: "40% 💎" },
+            { name: "Скидка 99%", weight: 1, display: "99% 👑" }
+        ];
+
+        function getRandomPrize() {
+            const totalWeight = prizes.reduce((sum, p) => sum + p.weight, 0);
+            let random = Math.random() * totalWeight;
+            for (let prize of prizes) {
+                if (random < prize.weight) return prize;
+                random -= prize.weight;
+            }
+            return prizes[0];
+        }
+
+        let isSpinning = false;
+        
+        function spinRoulette() {
+            if (isSpinning) return;
+            vibrate();
+            isSpinning = true;
+            
+            const btn = document.getElementById('spin-btn');
+            const wheel = document.getElementById('wheel');
+            const text = document.getElementById('wheel-text');
+            
+            btn.disabled = true;
+            btn.innerText = "Крутим...";
+            
+            // Визуальная анимация
+            wheel.classList.add('spinning');
+            
+            // Меняем текст каждые 100мс для эффекта
+            let interval = setInterval(() => {
+                text.innerText = prizes[Math.floor(Math.random() * prizes.length)].display;
+            }, 100);
+
+            setTimeout(() => {
+                clearInterval(interval);
+                wheel.classList.remove('spinning');
+                wheel.style.transform = `rotate(0deg)`; // сброс
+                
+                const prize = getRandomPrize();
+                text.innerText = prize.display;
+                isSpinning = false;
+
+                if (prize.name !== "Пусто") {
+                    // Если выиграли, отправляем данные боту и закрываем
+                    btn.innerText = "Выигрыш! Отправляем боту...";
+                    setTimeout(() => {
+                        tg.sendData(JSON.stringify({ 
+                            action: "roulette_win", 
+                            prize: prize.name 
+                        }));
+                        tg.close();
+                    }, 1500);
+                } else {
+                    btn.innerText = "Не повезло 😢";
+                    setCooldown(); // Ставим кулдаун на 24 часа
+                }
+            }, 2000); // Ждем 2 секунды, пока крутится
+        }
+
+        // Кулдаун 24 часа (86400000 мс)
+        function setCooldown() {
+            localStorage.setItem('lastSpin', Date.now().toString());
+            checkCooldown();
+        }
+
+        function checkCooldown() {
+            const lastSpin = localStorage.getItem('lastSpin');
+            const btn = document.getElementById('spin-btn');
+            const cooldownText = document.getElementById('cooldown-text');
+            
+            if (!lastSpin) return;
+
+            const timePassed = Date.now() - parseInt(lastSpin);
+            const cooldown = 24 * 60 * 60 * 1000;
+            
+            if (timePassed < cooldown) {
+                const timeLeft = cooldown - timePassed;
+                const hoursLeft = Math.ceil(timeLeft / (1000 * 60 * 60));
+                btn.disabled = true;
+                btn.innerText = "Крутить";
+                cooldownText.style.display = 'block';
+                cooldownText.innerText = `Следующая попытка через ${hoursLeft} ч.`;
+            } else {
+                btn.disabled = false;
+                cooldownText.style.display = 'none';
+            }
+        }
+        
+        // Проверяем при запуске
+        checkCooldown();
     </script>
 </body>
 </html>
