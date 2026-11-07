@@ -210,11 +210,19 @@
 
         <div id="tab-profile" class="tab-content">
             <div class="header"><h1>👤 Профиль</h1></div>
+            
             <div class="profile-card">
                 <div class="avatar" id="user-avatar">?</div>
                 <h2 id="user-name" style="margin: 0 0 5px;">Загрузка...</h2>
                 <p id="user-id" style="color: var(--hint-color); margin: 0;">ID: ...</p>
             </div>
+
+            <div class="news-card" style="text-align: left; border-color: #fbbf24; box-shadow: 0 0 15px rgba(251,191,36,0.1);">
+                <h3 style="margin: 0 0 10px; color: #fbbf24;">💳 Мой Баланс</h3>
+                <h1 id="user-balance" style="margin: 0 0 15px; font-size: 32px; text-shadow: 0 0 10px rgba(251,191,36,0.5); color: #fff;">0 ₽</h1>
+                <button class="buy-btn" style="background: var(--green-gradient);" onclick="contactSeller(event)">Пополнить</button>
+            </div>
+
             <div class="news-card" style="text-align: left;">
                 <h3 style="margin: 0 0 10px; color: #c77dff;">🎟 Мои промокоды</h3>
                 <p style="color: var(--hint-color); font-size: 14px; margin-bottom: 15px;">Здесь будут отображаться ваши активные скидки.</p>
@@ -252,6 +260,15 @@
             document.getElementById('user-name').innerText = user.first_name + (user.last_name ? ' ' + user.last_name : '');
             document.getElementById('user-id').innerText = 'ID: ' + user.id;
             document.getElementById('user-avatar').innerText = user.first_name[0].toUpperCase();
+            
+            fetch(`https://wogoro-bot-production.up.railway.app/api/user/${user.id}`)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.balance !== undefined) {
+                        document.getElementById('user-balance').innerText = data.balance + ' ₽';
+                    }
+                })
+                .catch(err => console.log("Ошибка баланса", err));
         }
 
         function switchTab(tabId, element) {
