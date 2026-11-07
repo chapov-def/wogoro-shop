@@ -1,0 +1,2 @@
+# wogoro-shop
+Telegram Shop
