@@ -1,154 +1,257 @@
-from aiogram import Router, F
-from aiogram.filters import Command
-from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State, StatesGroup
-from sqlalchemy import select
-from database import async_session, ensure_user, PromoCode, UserPromo
-import json
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Wogoro Shop</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #121212);
+            --text-color: var(--tg-theme-text-color, #ffffff);
+            --hint-color: var(--tg-theme-hint-color, #aaaaaa);
+            --card-bg: var(--tg-theme-secondary-bg-color, #1e1e1e);
+            --accent-color: #3b82f6;
+        }
 
-router = Router()
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+            overflow-x: hidden; /* Запрещаем горизонтальный скролл */
+        }
 
-class PromoState(StatesGroup):
-    waiting_for_code = State()
+        /* Контейнер для слайдов */
+        .views-container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+        }
 
+        .view {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background-color: var(--bg-color);
+            box-sizing: border-box;
+        }
 
-@router.message(Command("start"))
-async def cmd_start(message: Message):
-    async with async_session() as session:
-        await ensure_user(session, message.from_user)
-    
-    # ВСТАВЬ СЮДА СВОЮ ССЫЛКУ НА МАГАЗИН!
-    # Судя по твоему нику, она будет такой (не забудь слэш в конце):
-    web_app = WebAppInfo(url="https://chapov-def.github.io/wogoro-shop/")
-    
-    markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🛍 Открыть магазин", web_app=web_app)]
-    ])
+        /* Экран магазина */
+        #shop-view {
+            transform: translateX(0);
+        }
+        #shop-view.slide-left {
+            transform: translateX(-30%); /* Уезжает влево при открытии оплаты */
+            opacity: 0.5;
+        }
 
-    await message.answer(
-        "Привет, я <b>#Wogoro Black Russia</b>☄️\n\n"
-        "Я занимаюсь в сфере создания качественных проектов 👑\n\n"
-        "Полные проекты с готовым лаунчером, модом ⚠️\n\n"
-        "Жми кнопку ниже, чтобы открыть витрину товаров, или используй команды:\n"
-        "/price — Прайс-лист 💸\n"
-        "/buy — Как купить 🛒\n"
-        "/reviews — Отзывы ⭐️\n"
-        "/promo — Промокод 🎟\n"
-        "/profile — Профиль 👤",
-        reply_markup=markup
-    )
+        /* Экран оплаты */
+        #checkout-view {
+            transform: translateX(100%); /* Изначально спрятан справа */
+        }
+        #checkout-view.slide-in {
+            transform: translateX(0);
+        }
 
+        /* Стили магазина */
+        .header { text-align: center; margin-bottom: 24px; margin-top: 10px;}
+        .header h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;}
+        .header p { margin: 4px 0 0; color: var(--hint-color); font-size: 14px; }
 
-@router.message(F.web_app_data)
-async def web_app_data_handler(message: Message):
-    try:
-        data = json.loads(message.web_app_data.data)
-        product = data.get("product")
-        await message.answer(
-            f"🛍 Отличный выбор!\n\nТы выбрал товар: <b>{product}</b>\n\n"
-            f"Чтобы оплатить и получить товар, напиши нашему менеджеру: @Wogoro\n"
-            f"Не забудь упомянуть, что пришел из мини-аппа!"
-        )
-    except Exception:
-        await message.answer("Что-то пошло не так, напиши менеджеру @Wogoro")
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-
-@router.message(Command("help"))
-async def cmd_help(message: Message):
-    await message.answer(
-        "📖 <b>Доступные команды:</b>\n\n"
-        "/start — запустить бота\n"
-        "/profile — твой профиль\n"
-        "/price — прайс-лист\n"
-        "/buy — как купить\n"
-        "/reviews — отзывы\n"
-        "/promo — активировать промокод"
-    )
-
-
-@router.message(Command("profile"))
-async def cmd_profile(message: Message):
-    async with async_session() as session:
-        user = await ensure_user(session, message.from_user)
-    await message.answer(
-        f"👤 <b>Профиль</b>\n\n"
-        f"ID: <code>{user.id}</code>\n"
-        f"Имя: {user.first_name}\n"
-        f"Username: @{user.username or 'нет'}"
-    )
-
-
-@router.message(Command("price"))
-async def cmd_price(message: Message):
-    await message.answer(
-        "💸 <b>Прайс-лист и товары</b>\n\n"
-        "<b>Проекты (с лаунчером):</b>\n"
-        "▪️ BLACK RUSSIA ULTRA — 200💸 / 100⭐️\n"
-        "▪️ BLACK RUSSIA PRO — 150💸 / 85⭐️\n"
-        "▪️ BLACK RUSSIA NEW — 100💸 / 65⭐️\n\n"
-        "<b>Моды (без лаунчера):</b>\n"
-        "▪️ BLACK RUSSIA ULTRA — 150💸 / 85⭐️\n"
-        "▪️ BLACK RUSSIA PRO — 100💸 / 75⭐️\n"
-        "▪️ BLACK RUSSIA NEW — 95💸 / 65⭐️\n\n"
-        "⚠️ <i>При покупке мода лаунчер в комплект не входит!</i>"
-    )
-
-
-@router.message(Command("buy"))
-async def cmd_buy(message: Message):
-    await message.answer(
-        "🛒 <b>Как купить и связаться?</b>\n\n"
-        "Правила покупки: @Wogoro\n"
-        "Поддержка: @Wogoro\n\n"
-        "‼️ <b>Внимание:</b>\n"
-        "BLACK RUSSIA PRO 💥 и ULTRA ✔️ будут обновляться и кидаться в личные сообщения."
-    )
-
-
-@router.message(Command("reviews"))
-async def cmd_reviews(message: Message):
-    await message.answer(
-        "⭐️ <b>Отзывы и гарантии</b>\n\n"
-        "Все доказательства и отзывы вы можете посмотреть в нашем канале:\n\n"
-        "👉 <a href='https://t.me/WogoroShop'>Перейти в канал с отзывами</a>"
-    )
-
-
-@router.message(Command("promo"))
-async def cmd_promo(message: Message, state: FSMContext):
-    await state.set_state(PromoState.waiting_for_code)
-    await message.answer("🎟 Отправь мне промокод, чтобы активировать скидку.\n\n/cancel — отмена.")
-
-
-@router.message(PromoState.waiting_for_code, F.text, ~F.text.startswith("/"))
-async def process_promo(message: Message, state: FSMContext):
-    code = message.text.strip().upper()
-    await state.clear()
-
-    async with async_session() as session:
-        promo = await session.scalar(select(PromoCode).where(PromoCode.code == code))
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .card-title { font-size: 18px; font-weight: 700; margin: 0; }
+        .card-desc { font-size: 13px; color: var(--hint-color); margin: 4px 0 0; line-height: 1.4; }
         
-        if not promo:
-            return await message.answer("❌ Такого промокода не существует.")
+        .price-badge {
+            background: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        .buy-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+        .buy-btn:active { opacity: 0.7; }
+
+        /* Стили экрана оплаты */
+        .back-btn {
+            background: none; border: none; color: var(--accent-color);
+            font-size: 16px; font-weight: 600; padding: 10px 0; margin-bottom: 10px;
+            cursor: pointer; display: flex; align-items: center; gap: 5px;
+        }
+        .back-btn:active { opacity: 0.7; }
+
+        .checkout-title { font-size: 24px; font-weight: 800; margin: 0 0 8px 0; }
+        .checkout-subtitle { font-size: 15px; color: var(--hint-color); margin-bottom: 24px; }
         
-        if promo.uses_left <= 0:
-            return await message.answer("❌ Этот промокод больше не работает.")
+        .payment-options { display: flex; flex-direction: column; gap: 14px; }
 
-        already_used = await session.scalar(
-            select(UserPromo).where(UserPromo.user_id == message.from_user.id, UserPromo.promo_id == promo.id)
-        )
+        .pay-btn {
+            display: flex; align-items: center; justify-content: space-between;
+            border: none; padding: 18px; border-radius: 16px; font-size: 16px;
+            font-weight: 700; cursor: pointer; transition: transform 0.1s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .pay-btn:active { transform: scale(0.98); }
         
-        if already_used:
-            return await message.answer("❌ Ты уже активировал этот промокод.")
+        .pay-btn-stars { background: linear-gradient(135deg, #f59e0b, #fbbf24); color: #fff; }
+        .pay-btn-sbp { background: linear-gradient(135deg, #22c55e, #10b981); color: #fff; }
 
-        promo.uses_left -= 1
-        new_use = UserPromo(user_id=message.from_user.id, promo_id=promo.id)
-        session.add(new_use)
-        await session.commit()
+    </style>
+</head>
+<body>
 
-        await message.answer(
-            f"✅ Промокод <b>{code}</b> активирован!\n\n"
-            f"Твоя скидка: <b>{promo.discount}%</b>.\n"
-            f"Покажи это сообщение менеджеру (@Wogoro)."
-        )
+    <div class="views-container">
+        
+        <!-- ЭКРАН 1: МАГАЗИН -->
+        <div id="shop-view" class="view">
+            <div class="header">
+                <h1>👑 Wogoro Shop</h1>
+                <p>Качественные проекты и моды</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="card-title">BLACK RUSSIA ULTRA</h3>
+                        <p class="card-desc">Полный проект с лаунчером и обновлениями</p>
+                    </div>
+                    <div class="price-badge">100 ⭐️</div>
+                </div>
+                <button class="buy-btn" onclick="openCheckout('BLACK RUSSIA ULTRA', 100)">Купить</button>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="card-title">BLACK RUSSIA PRO</h3>
+                        <p class="card-desc">Проект с мини-обновлениями</p>
+                    </div>
+                    <div class="price-badge">85 ⭐️</div>
+                </div>
+                <button class="buy-btn" onclick="openCheckout('BLACK RUSSIA PRO', 85)">Купить</button>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div>
+                        <h3 class="card-title">BLACK RUSSIA NEW</h3>
+                        <p class="card-desc">Качественный мод (без лаунчера)</p>
+                    </div>
+                    <div class="price-badge">65 ⭐️</div>
+                </div>
+                <button class="buy-btn" onclick="openCheckout('BLACK RUSSIA NEW', 65)">Купить</button>
+            </div>
+        </div>
+
+        <!-- ЭКРАН 2: ОПЛАТА (Слайд) -->
+        <div id="checkout-view" class="view" style="padding: 0 16px;">
+            <button class="back-btn" onclick="closeCheckout()">← Назад в магазин</button>
+            
+            <h2 id="ch-title" class="checkout-title">Товар</h2>
+            <div id="ch-price" class="checkout-subtitle">К оплате: 0 ⭐️</div>
+            
+            <div class="payment-options">
+                <button class="pay-btn pay-btn-stars" onclick="payWithStars()">
+                    <span>⭐️ Оплатить Stars</span>
+                    <span>→</span>
+                </button>
+                <button class="pay-btn pay-btn-sbp" onclick="payWithSBP()">
+                    <span>💳 Оплатить по СБП</span>
+                    <span>→</span>
+                </button>
+            </div>
+            
+            <p style="text-align: center; color: var(--hint-color); font-size: 12px; margin-top: 30px;">
+                Безопасная оплата через Telegram<br>или перевод по СБП менеджеру.
+            </p>
+        </div>
+
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Разворачиваем на весь экран
+
+        // Переменные для хранения выбранного товара
+        let currentProduct = "";
+        let currentPrice = 0;
+
+        // Добавляем тактильную отдачу (вибрацию) при нажатии
+        function vibrate() {
+            if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
+        }
+
+        // Функция: Открыть экран оплаты
+        function openCheckout(product, price) {
+            vibrate();
+            currentProduct = product;
+            currentPrice = price;
+
+            // Меняем текст на экране оплаты
+            document.getElementById('ch-title').innerText = product;
+            document.getElementById('ch-price').innerText = "К оплате: " + price + " ⭐️";
+
+            // Запускаем анимацию слайдов
+            document.getElementById('shop-view').classList.add('slide-left');
+            document.getElementById('checkout-view').classList.add('slide-in');
+        }
+
+        // Функция: Вернуться назад в магазин
+        function closeCheckout() {
+            vibrate();
+            document.getElementById('checkout-view').classList.remove('slide-in');
+            document.getElementById('shop-view').classList.remove('slide-left');
+        }
+
+        // Функция: Оплата Звездами (отправляем боту)
+        function payWithStars() {
+            vibrate();
+            tg.sendData(JSON.stringify({ 
+                action: "pay_stars", 
+                product: currentProduct, 
+                price: currentPrice 
+            }));
+            tg.close(); 
+        }
+
+        // Функция: Оплата по СБП (отправляем боту)
+        function payWithSBP() {
+            vibrate();
+            tg.sendData(JSON.stringify({ 
+                action: "pay_sbp", 
+                product: currentProduct 
+            }));
+            tg.close(); 
+        }
+    </script>
+</body>
+    </html>
