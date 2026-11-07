@@ -1,89 +1,154 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Wogoro Shop</title>
-    <!-- Подключаем скрипт Телеграма -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #1a1a1a;
-            color: #ffffff;
-            margin: 0;
-            padding: 20px;
-        }
-        h1 { text-align: center; font-size: 24px; margin-bottom: 5px; }
-        p.subtitle { text-align: center; color: #888; font-size: 14px; margin-top: 0; margin-bottom: 20px;}
-        .card {
-            background-color: #2a2a2a;
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            border: 1px solid #3a3a3a;
-        }
-        .card-title { font-size: 18px; font-weight: bold; margin-bottom: 5px; color: #fff;}
-        .card-desc { font-size: 14px; color: #aaa; margin-bottom: 10px; }
-        .price-row { display: flex; justify-content: space-between; align-items: center; margin-top: 10px;}
-        .price { font-size: 16px; font-weight: bold; color: #4ade80; }
-        .buy-btn {
-            background-color: #3b82f6;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 8px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-    </style>
-</head>
-<body>
-    <h1>👑 Wogoro Black Russia</h1>
-    <p class="subtitle">Качественные проекты и моды</p>
+from aiogram import Router, F
+from aiogram.filters import Command
+from aiogram.types import Message, WebAppInfo, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from sqlalchemy import select
+from database import async_session, ensure_user, PromoCode, UserPromo
+import json
 
-    <!-- Карточка 1 -->
-    <div class="card">
-        <div class="card-title">BLACK RUSSIA ULTRA</div>
-        <div class="card-desc">Полный проект с лаунчером и обновлениями</div>
-        <div class="price-row">
-            <div class="price">200 💸 / 100 ⭐️</div>
-            <button class="buy-btn" onclick="buy('ULTRA')">Купить</button>
-        </div>
-    </div>
+router = Router()
 
-    <!-- Карточка 2 -->
-    <div class="card">
-        <div class="card-title">BLACK RUSSIA PRO</div>
-        <div class="card-desc">Проект с мини-обновлениями</div>
-        <div class="price-row">
-            <div class="price">150 💸 / 85 ⭐️</div>
-            <button class="buy-btn" onclick="buy('PRO')">Купить</button>
-        </div>
-    </div>
+class PromoState(StatesGroup):
+    waiting_for_code = State()
 
-    <!-- Карточка 3 -->
-    <div class="card">
-        <div class="card-title">BLACK RUSSIA NEW</div>
-        <div class="card-desc">Качественный мод</div>
-        <div class="price-row">
-            <div class="price">100 💸 / 65 ⭐️</div>
-            <button class="buy-btn" onclick="buy('NEW')">Купить</button>
-        </div>
-    </div>
 
-    <script>
-        // Инициализация приложения
-        let tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем на весь экран
+@router.message(Command("start"))
+async def cmd_start(message: Message):
+    async with async_session() as session:
+        await ensure_user(session, message.from_user)
+    
+    # ВСТАВЬ СЮДА СВОЮ ССЫЛКУ НА МАГАЗИН!
+    # Судя по твоему нику, она будет такой (не забудь слэш в конце):
+    web_app = WebAppInfo(url="https://chapov-def.github.io/wogoro-shop/")
+    
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🛍 Открыть магазин", web_app=web_app)]
+    ])
 
-        // Функция при нажатии на кнопку "Купить"
-        function buy(product) {
-            // Отправляем данные боту (он покажет менеджера)
-            tg.sendData(JSON.stringify({ action: "buy", product: product }));
-            // Закрываем мини-апп
-            tg.close(); 
-        }
-    </script>
-</body>
-</html>
+    await message.answer(
+        "Привет, я <b>#Wogoro Black Russia</b>☄️\n\n"
+        "Я занимаюсь в сфере создания качественных проектов 👑\n\n"
+        "Полные проекты с готовым лаунчером, модом ⚠️\n\n"
+        "Жми кнопку ниже, чтобы открыть витрину товаров, или используй команды:\n"
+        "/price — Прайс-лист 💸\n"
+        "/buy — Как купить 🛒\n"
+        "/reviews — Отзывы ⭐️\n"
+        "/promo — Промокод 🎟\n"
+        "/profile — Профиль 👤",
+        reply_markup=markup
+    )
+
+
+@router.message(F.web_app_data)
+async def web_app_data_handler(message: Message):
+    try:
+        data = json.loads(message.web_app_data.data)
+        product = data.get("product")
+        await message.answer(
+            f"🛍 Отличный выбор!\n\nТы выбрал товар: <b>{product}</b>\n\n"
+            f"Чтобы оплатить и получить товар, напиши нашему менеджеру: @Wogoro\n"
+            f"Не забудь упомянуть, что пришел из мини-аппа!"
+        )
+    except Exception:
+        await message.answer("Что-то пошло не так, напиши менеджеру @Wogoro")
+
+
+@router.message(Command("help"))
+async def cmd_help(message: Message):
+    await message.answer(
+        "📖 <b>Доступные команды:</b>\n\n"
+        "/start — запустить бота\n"
+        "/profile — твой профиль\n"
+        "/price — прайс-лист\n"
+        "/buy — как купить\n"
+        "/reviews — отзывы\n"
+        "/promo — активировать промокод"
+    )
+
+
+@router.message(Command("profile"))
+async def cmd_profile(message: Message):
+    async with async_session() as session:
+        user = await ensure_user(session, message.from_user)
+    await message.answer(
+        f"👤 <b>Профиль</b>\n\n"
+        f"ID: <code>{user.id}</code>\n"
+        f"Имя: {user.first_name}\n"
+        f"Username: @{user.username or 'нет'}"
+    )
+
+
+@router.message(Command("price"))
+async def cmd_price(message: Message):
+    await message.answer(
+        "💸 <b>Прайс-лист и товары</b>\n\n"
+        "<b>Проекты (с лаунчером):</b>\n"
+        "▪️ BLACK RUSSIA ULTRA — 200💸 / 100⭐️\n"
+        "▪️ BLACK RUSSIA PRO — 150💸 / 85⭐️\n"
+        "▪️ BLACK RUSSIA NEW — 100💸 / 65⭐️\n\n"
+        "<b>Моды (без лаунчера):</b>\n"
+        "▪️ BLACK RUSSIA ULTRA — 150💸 / 85⭐️\n"
+        "▪️ BLACK RUSSIA PRO — 100💸 / 75⭐️\n"
+        "▪️ BLACK RUSSIA NEW — 95💸 / 65⭐️\n\n"
+        "⚠️ <i>При покупке мода лаунчер в комплект не входит!</i>"
+    )
+
+
+@router.message(Command("buy"))
+async def cmd_buy(message: Message):
+    await message.answer(
+        "🛒 <b>Как купить и связаться?</b>\n\n"
+        "Правила покупки: @Wogoro\n"
+        "Поддержка: @Wogoro\n\n"
+        "‼️ <b>Внимание:</b>\n"
+        "BLACK RUSSIA PRO 💥 и ULTRA ✔️ будут обновляться и кидаться в личные сообщения."
+    )
+
+
+@router.message(Command("reviews"))
+async def cmd_reviews(message: Message):
+    await message.answer(
+        "⭐️ <b>Отзывы и гарантии</b>\n\n"
+        "Все доказательства и отзывы вы можете посмотреть в нашем канале:\n\n"
+        "👉 <a href='https://t.me/WogoroShop'>Перейти в канал с отзывами</a>"
+    )
+
+
+@router.message(Command("promo"))
+async def cmd_promo(message: Message, state: FSMContext):
+    await state.set_state(PromoState.waiting_for_code)
+    await message.answer("🎟 Отправь мне промокод, чтобы активировать скидку.\n\n/cancel — отмена.")
+
+
+@router.message(PromoState.waiting_for_code, F.text, ~F.text.startswith("/"))
+async def process_promo(message: Message, state: FSMContext):
+    code = message.text.strip().upper()
+    await state.clear()
+
+    async with async_session() as session:
+        promo = await session.scalar(select(PromoCode).where(PromoCode.code == code))
+        
+        if not promo:
+            return await message.answer("❌ Такого промокода не существует.")
+        
+        if promo.uses_left <= 0:
+            return await message.answer("❌ Этот промокод больше не работает.")
+
+        already_used = await session.scalar(
+            select(UserPromo).where(UserPromo.user_id == message.from_user.id, UserPromo.promo_id == promo.id)
+        )
+        
+        if already_used:
+            return await message.answer("❌ Ты уже активировал этот промокод.")
+
+        promo.uses_left -= 1
+        new_use = UserPromo(user_id=message.from_user.id, promo_id=promo.id)
+        session.add(new_use)
+        await session.commit()
+
+        await message.answer(
+            f"✅ Промокод <b>{code}</b> активирован!\n\n"
+            f"Твоя скидка: <b>{promo.discount}%</b>.\n"
+            f"Покажи это сообщение менеджеру (@Wogoro)."
+        )
