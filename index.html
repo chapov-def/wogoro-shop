@@ -7,61 +7,135 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: var(--tg-theme-bg-color, #121212);
-            --text-color: var(--tg-theme-text-color, #ffffff);
-            --hint-color: var(--tg-theme-hint-color, #aaaaaa);
-            --card-bg: var(--tg-theme-secondary-bg-color, #1e1e1e);
+            --bg-color: #0d0d0d;
+            --text-color: #ffffff;
+            --hint-color: #aaaaaa;
+            --card-bg: rgba(30, 30, 30, 0.6); /* Полупрозрачный для стекла */
             --purple-gradient: linear-gradient(135deg, #b5179e, #7209b7);
+            --neon-purple: #c77dff;
             --green-gradient: linear-gradient(135deg, #22c55e, #15803d);
-            --nav-bg: rgba(30, 30, 30, 0.95);
+            --nav-bg: rgba(15, 15, 15, 0.85);
             --anim-easing: cubic-bezier(0.25, 1, 0.5, 1);
         }
 
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #000; color: var(--text-color); margin: 0; padding: 0; height: 100vh; overflow: hidden; }
+        /* Фиолетовое свечение на фоне */
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: radial-gradient(circle at top, #2a0845 0%, #000000 60%); 
+            background-attachment: fixed;
+            color: var(--text-color); 
+            margin: 0; padding: 0; height: 100vh; overflow: hidden; 
+        }
+
         .app-container { position: relative; width: 100%; height: calc(100vh - 60px); overflow: hidden; }
-        .tab-content { position: absolute; top: 0; left: 0; width: 100%; height: 100%; overflow-y: auto; padding: 16px; padding-bottom: 20px; box-sizing: border-box; opacity: 0; visibility: hidden; transition: opacity 0.3s; }
-        .tab-content.active { opacity: 1; visibility: visible; }
+        
+        /* Плавное появление вкладок */
+        .tab-content { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            overflow-y: auto; padding: 16px; padding-bottom: 20px; box-sizing: border-box; 
+            opacity: 0; visibility: hidden; transition: opacity 0.4s ease, transform 0.4s ease; 
+            transform: translateY(10px);
+        }
+        .tab-content.active { opacity: 1; visibility: visible; transform: translateY(0); }
 
         /* Экран оплаты */
-        .checkout-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-color); z-index: 100; padding: 16px; box-sizing: border-box; overflow-y: auto; transform: translateX(100%); transition: transform 0.45s var(--anim-easing); box-shadow: -15px 0 30px rgba(0,0,0,0.7); border-radius: 20px 0 0 20px; }
+        .checkout-overlay { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(13, 13, 13, 0.95); backdrop-filter: blur(15px); z-index: 100; 
+            padding: 16px; box-sizing: border-box; overflow-y: auto; 
+            transform: translateX(100%); transition: transform 0.45s var(--anim-easing); 
+            box-shadow: -15px 0 30px rgba(114, 9, 183, 0.3); border-radius: 20px 0 0 20px; 
+        }
         .checkout-overlay.slide-in { transform: translateX(0); }
 
         /* Меню */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; background: var(--nav-bg); backdrop-filter: blur(10px); display: flex; justify-content: space-around; align-items: center; border-top: 1px solid rgba(255,255,255,0.05); z-index: 200; }
-        .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--hint-color); cursor: pointer; transition: color 0.2s; }
-        .nav-item.active { color: #c77dff; font-weight: bold; }
-        .nav-item span { font-size: 20px; margin-bottom: 2px; }
+        .bottom-nav { 
+            position: fixed; bottom: 0; left: 0; width: 100%; height: 60px; 
+            background: var(--nav-bg); backdrop-filter: blur(15px); 
+            display: flex; justify-content: space-around; align-items: center; 
+            border-top: 1px solid rgba(199, 125, 255, 0.1); z-index: 200; 
+        }
+        .nav-item { display: flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--hint-color); cursor: pointer; transition: all 0.2s; }
+        .nav-item.active { color: var(--neon-purple); font-weight: bold; text-shadow: 0 0 10px rgba(199, 125, 255, 0.5); }
+        .nav-item span { font-size: 20px; margin-bottom: 2px; transition: transform 0.2s; }
+        .nav-item.active span { transform: scale(1.1); }
 
-        /* Товары */
-        .header h1 { margin: 0; font-size: 24px; font-weight: 800; text-align: center; }
+        /* Заголовки */
+        .header h1 { 
+            margin: 0; font-size: 26px; font-weight: 800; text-align: center;
+            background: linear-gradient(90deg, #c77dff, #b5179e);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 0 10px rgba(181, 23, 158, 0.3));
+        }
         .header p { margin: 4px 0 20px; color: var(--hint-color); font-size: 14px; text-align: center; }
-        .category-title { font-size: 18px; font-weight: 700; margin: 20px 0 10px 4px; }
-        .card { background-color: var(--card-bg); border-radius: 16px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); display: flex; flex-direction: column; gap: 12px; border: 1px solid rgba(255,255,255,0.05); }
+        .category-title { font-size: 18px; font-weight: 700; margin: 20px 0 10px 4px; color: #fff; text-shadow: 0 0 8px rgba(255,255,255,0.2);}
+
+        /* Стеклянные карточки товаров */
+        .card { 
+            background-color: var(--card-bg); backdrop-filter: blur(10px);
+            border-radius: 16px; padding: 16px; margin-bottom: 16px; 
+            display: flex; flex-direction: column; gap: 12px; 
+            border: 1px solid rgba(199, 125, 255, 0.15); 
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        .card:active { transform: scale(0.98); border-color: rgba(199, 125, 255, 0.5); box-shadow: 0 0 20px rgba(199, 125, 255, 0.2); }
+        
         .card-title { font-size: 16px; font-weight: 700; margin: 0; }
         .card-desc { font-size: 13px; color: var(--hint-color); margin: 4px 0 0; }
         .prices { display: flex; gap: 8px; margin-top: 5px;}
         .price-badge { background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: 700; border: 1px solid rgba(16, 185, 129, 0.3); }
         .price-badge-stars { background: rgba(157, 78, 221, 0.15); color: #c77dff; border: 1px solid rgba(157, 78, 221, 0.3); }
-        .buy-btn { background: var(--purple-gradient); color: white; border: none; padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; width: 100%; transition: transform 0.1s; }
-        .buy-btn:active { transform: scale(0.96); }
+        
+        .buy-btn { 
+            background: var(--purple-gradient); color: white; border: none; 
+            padding: 12px; border-radius: 10px; font-size: 15px; font-weight: 700; 
+            cursor: pointer; width: 100%; transition: transform 0.1s, box-shadow 0.2s; 
+            box-shadow: 0 4px 15px rgba(114, 9, 183, 0.4);
+        }
+        .buy-btn:active { transform: scale(0.96); box-shadow: 0 0 25px rgba(114, 9, 183, 0.8); }
 
         /* Оплата */
         .back-btn { background: none; border: none; color: #c77dff; font-size: 16px; font-weight: 600; padding: 10px 0; margin-bottom: 10px; cursor: pointer; }
-        .checkout-title { font-size: 22px; font-weight: 800; margin: 0 0 8px 0; }
-        .contact-btn { display: block; text-align: center; background: var(--green-gradient); color: white; text-decoration: none; padding: 18px; border-radius: 16px; font-size: 18px; font-weight: 800; margin-bottom: 12px; }
+        .checkout-title { font-size: 24px; font-weight: 800; margin: 0 0 8px 0; color: #fff;}
+        .contact-btn { 
+            display: block; text-align: center; background: var(--green-gradient); 
+            color: white; text-decoration: none; padding: 18px; border-radius: 16px; 
+            font-size: 18px; font-weight: 800; margin-bottom: 12px; 
+            box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); transition: transform 0.1s;
+        }
+        .contact-btn:active { transform: scale(0.96); }
 
         /* Рулетка */
         .roulette-box { text-align: center; padding: 20px 0; }
-        .wheel-container { width: 200px; height: 200px; margin: 0 auto 30px; border-radius: 50%; border: 8px solid #7209b7; position: relative; display: flex; align-items: center; justify-content: center; background: #1e1e1e; box-shadow: 0 0 20px rgba(114, 9, 183, 0.5); }
-        .wheel-text { font-size: 24px; font-weight: 800; color: #fff; }
-        .spin-btn { background: var(--purple-gradient); color: white; border: none; padding: 18px 40px; border-radius: 30px; font-size: 18px; font-weight: 800; cursor: pointer; }
-        .spin-btn:disabled { background: #333; color: #777; cursor: not-allowed; box-shadow: none;}
-        .cooldown-text { color: #fbbf24; margin-top: 15px; font-weight: bold; font-size: 15px; display: none; font-family: monospace;}
+        .wheel-container { 
+            width: 200px; height: 200px; margin: 0 auto 30px; border-radius: 50%; 
+            border: 8px solid #7209b7; position: relative; display: flex; 
+            align-items: center; justify-content: center; 
+            background: radial-gradient(circle, #2a0845 0%, #1e1e1e 100%);
+            box-shadow: 0 0 30px rgba(114, 9, 183, 0.6), inset 0 0 20px rgba(114, 9, 183, 0.4); 
+        }
+        .wheel-text { font-size: 24px; font-weight: 800; color: #fff; text-shadow: 0 0 10px #c77dff;}
+        
+        @keyframes pulseBtn { 0% { box-shadow: 0 0 0 0 rgba(114, 9, 183, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(114, 9, 183, 0); } 100% { box-shadow: 0 0 0 0 rgba(114, 9, 183, 0); } }
+        .spin-btn { 
+            background: var(--purple-gradient); color: white; border: none; 
+            padding: 18px 40px; border-radius: 30px; font-size: 18px; font-weight: 800; 
+            cursor: pointer; animation: pulseBtn 2s infinite;
+        }
+        .spin-btn:disabled { background: #333; color: #777; cursor: not-allowed; animation: none; box-shadow: none;}
+        .cooldown-text { color: #fbbf24; margin-top: 15px; font-weight: bold; font-size: 16px; display: none; font-family: monospace; text-shadow: 0 0 5px rgba(251, 191, 36, 0.5);}
+        
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(1080deg); } }
         .spinning { animation: spin 2s cubic-bezier(0.1, 0.7, 0.1, 1) forwards; }
 
         /* Награды */
-        .coupon { background: var(--card-bg); border-radius: 12px; margin-bottom: 12px; padding: 15px; cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden; border-left: 5px solid #333;}
+        .coupon { 
+            background: var(--card-bg); backdrop-filter: blur(10px);
+            border-radius: 12px; margin-bottom: 12px; padding: 15px; cursor: pointer; 
+            transition: all 0.3s ease; position: relative; overflow: hidden; 
+            border: 1px solid rgba(255,255,255,0.05); border-left-width: 5px;
+        }
         .coupon-header { display: flex; justify-content: space-between; align-items: center; }
         .coupon-title { font-size: 18px; font-weight: 800; }
         .coupon-rarity { font-size: 12px; padding: 3px 8px; border-radius: 10px; font-weight: bold; text-transform: uppercase;}
@@ -72,16 +146,17 @@
         .coupon.common .coupon-rarity { background: rgba(156, 163, 175, 0.2); color: #9ca3af; }
         .coupon.rare { border-left-color: #3b82f6; }
         .coupon.rare .coupon-rarity { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
-        .coupon.epic { border-left-color: #a855f7; }
+        .coupon.epic { border-left-color: #a855f7; box-shadow: 0 0 15px rgba(168, 85, 247, 0.1); }
         .coupon.epic .coupon-rarity { background: rgba(168, 85, 247, 0.2); color: #a855f7; }
-        .coupon.legendary { border-left-color: #fbbf24; box-shadow: 0 0 15px rgba(251, 191, 36, 0.2); }
+        .coupon.legendary { border-left-color: #fbbf24; box-shadow: 0 0 20px rgba(251, 191, 36, 0.2); border-color: rgba(251, 191, 36, 0.3);}
         .coupon.legendary .coupon-rarity { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
 
         /* Новости и FAQ */
-        .news-card { background: var(--card-bg); border-radius: 16px; padding: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;}
-        .news-btn { display: block; background: #3b82f6; color: white; text-decoration: none; padding: 15px; border-radius: 12px; font-weight: bold; margin-top: 15px; }
+        .news-card { background: var(--card-bg); backdrop-filter: blur(10px); border-radius: 16px; padding: 24px; text-align: center; border: 1px solid rgba(199, 125, 255, 0.15); margin-bottom: 20px;}
+        .news-btn { display: block; background: #3b82f6; color: white; text-decoration: none; padding: 15px; border-radius: 12px; font-weight: bold; margin-top: 15px; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);}
+        
         .faq-title { font-size: 20px; font-weight: 800; margin: 20px 0 15px 4px; }
-        .faq-item { background: var(--card-bg); border-radius: 12px; margin-bottom: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); }
+        .faq-item { background: var(--card-bg); backdrop-filter: blur(10px); border-radius: 12px; margin-bottom: 10px; overflow: hidden; border: 1px solid rgba(199, 125, 255, 0.1); }
         .faq-question { padding: 15px; font-weight: 600; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
         .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out, padding 0.3s ease-out; padding: 0 15px; color: #aaa; font-size: 14px; line-height: 1.5; }
         .faq-item.active .faq-answer { max-height: 250px; padding-bottom: 15px; }
@@ -89,8 +164,8 @@
         .faq-item.active .faq-icon { transform: rotate(180deg); }
 
         /* Профиль */
-        .profile-card { background: var(--card-bg); border-radius: 16px; padding: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 16px;}
-        .avatar { width: 80px; height: 80px; background: var(--purple-gradient); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; }
+        .profile-card { background: var(--card-bg); backdrop-filter: blur(10px); border-radius: 16px; padding: 24px; text-align: center; border: 1px solid rgba(199, 125, 255, 0.15); margin-bottom: 16px;}
+        .avatar { width: 80px; height: 80px; background: var(--purple-gradient); border-radius: 50%; margin: 0 auto 15px; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: bold; box-shadow: 0 0 20px rgba(114, 9, 183, 0.5); }
     </style>
 </head>
 <body>
@@ -113,7 +188,7 @@
 
         <!-- ВКЛАДКА 3: НАГРАДЫ -->
         <div id="tab-rewards" class="tab-content">
-            <div class="header"><h1>🎁 Мои Награды</h1><p>Твои купоны на скидку</p></div>
+            <div class="header"><h1>🎁 Награды</h1><p>Твои купоны на скидку</p></div>
             <div id="rewards-list"></div>
         </div>
 
@@ -122,7 +197,7 @@
             <div class="header"><h1>📰 Инфо</h1><p>Новости и частые вопросы</p></div>
             
             <div class="news-card">
-                <div style="font-size: 50px; margin-bottom: 15px;">⭐️</div>
+                <div style="font-size: 50px; margin-bottom: 15px; text-shadow: 0 0 15px #fbbf24;">⭐️</div>
                 <h2 style="margin: 0 0 10px;">Наш канал</h2>
                 <p style="color: var(--hint-color); font-size: 14px;">Отзывы, новости и доказательства качества.</p>
                 <a href="#" onclick="openLink(event, 'https://t.me/WogoroShop')" class="news-btn">Перейти в канал</a>
@@ -166,7 +241,7 @@
         <div id="checkout-view" class="checkout-overlay">
             <button class="back-btn" onclick="closeCheckout()">← Назад</button>
             <h2 id="ch-title" class="checkout-title">Товар</h2>
-            <div id="ch-price" style="color: var(--hint-color); margin-bottom: 20px;">Цена: 0</div>
+            <div id="ch-price" style="color: var(--hint-color); margin-bottom: 20px; font-size: 16px;">Цена: 0</div>
             <p style="font-size: 15px; color: #ccc; margin-bottom: 20px; line-height: 1.5;">
                 Оплата рублями (СБП) или звездами Telegram.<br>Напишите менеджеру для завершения покупки.
             </p>
@@ -239,7 +314,7 @@
                         </div>
                         <div class="coupon-details">
                             <p style="margin:0 0 5px 0;">📅 Выиграно: ${r.date}</p>
-                            <p style="margin:0 0 5px 0; font-family: monospace; font-size: 16px; color: #fbbf24;">🎫 Код: <b>${r.ticket || 'НЕТ КОДА'}</b></p>
+                            <p style="margin:0 0 5px 0; font-family: monospace; font-size: 16px; color: #fbbf24; text-shadow: 0 0 5px rgba(251,191,36,0.3);">🎫 Код: <b>${r.ticket || 'НЕТ КОДА'}</b></p>
                             <p style="margin:0; color:#fff;">Покажите этот код менеджеру <b>@Wogoro</b> для активации скидки.</p>
                         </div>
                     </div>
@@ -249,8 +324,7 @@
         }
         function toggleCoupon(element) { vibrate(); element.classList.toggle('active'); }
 
-        // --- ТОВАРЫ ---
-        // ВАЖНО: Убедись, что тут твой правильный домен с Railway!
+        // --- ТОВАРЫ (ЗАГРУЗКА С RAILWAY) ---
         const API_URL = "https://wogoro-bot-production.up.railway.app/api/products"; 
 
         fetch(API_URL)
@@ -343,12 +417,11 @@
                 text.innerText = prize.display; 
                 isSpinning = false;
 
-                setCooldown(); // Ставим КД в любом случае
+                setCooldown();
 
                 if (prize.name !== "Пусто") {
                     let rewards = JSON.parse(localStorage.getItem('userRewards')) || [];
                     
-                    // Генерируем уникальный код
                     const ticketId = 'WOG-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 
                     rewards.push({
@@ -418,4 +491,4 @@
         checkCooldown();
     </script>
 </body>
-                    </html>
+</html>
